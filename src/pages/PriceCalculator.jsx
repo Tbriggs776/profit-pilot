@@ -32,6 +32,7 @@ import {
 import ShareEstimate from '@/components/ShareEstimate';
 import SaveAsTemplateDialog from '@/components/SaveAsTemplateDialog';
 import TemplateGallery from '@/components/TemplateGallery';
+import SubAssignmentsEditor from '@/components/SubAssignmentsEditor';
 import { downloadEstimatePDF } from '@/lib/pdf';
 import { getTemplateWithLines, linesFromTemplate } from '@/api/templates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -610,6 +611,14 @@ export default function PriceCalculator() {
                   showTaxable={cfg.category !== 'custom_pass_through'}
                 />
               ))}
+
+              {/* Sub-contractor assignments (only meaningful for saved estimates) */}
+              {canSave && (
+                <SubAssignmentsEditor
+                  estimateId={loadedEstimate?.id}
+                  orgId={activeOrg?.id}
+                />
+              )}
 
               {/* Rates card */}
               <Card className="border-0 shadow-lg shadow-slate-200/50 bg-white/80 dark:bg-slate-800/80 backdrop-blur">

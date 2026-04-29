@@ -50,6 +50,7 @@
 import Home from './pages/Home';
 import PriceCalculator from './pages/PriceCalculator';
 import Estimates from './pages/Estimates';
+import Subcontractors from './pages/Subcontractors';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import __Layout from './Layout.jsx';
@@ -59,6 +60,7 @@ export const PAGES = {
     "Home": Home,
     "PriceCalculator": PriceCalculator,
     "Estimates": Estimates,
+    "Subcontractors": Subcontractors,
     "Analytics": Analytics,
     "Profile": Profile,
 }

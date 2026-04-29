@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Link2,
   Sparkles,
+  HardHat,
 } from 'lucide-react';
 import TemplateGallery from '@/components/TemplateGallery';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,12 @@ export default function Estimates() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/Subcontractors" className="hidden sm:block">
+              <Button size="sm" variant="ghost">
+                <HardHat className="w-4 h-4 mr-1 text-orange-600" />
+                Subs
+              </Button>
+            </Link>
             <Button
               size="sm"
               variant="outline"
