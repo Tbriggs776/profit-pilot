@@ -266,103 +266,203 @@ function AssignmentRow({ assignment, onUpdate, onMarkPaid, onDelete }) {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-2 items-start p-2 rounded-lg bg-slate-50/40 dark:bg-slate-900/20">
-      {/* Sub identity */}
-      <div className="col-span-12 sm:col-span-3 min-w-0">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
-            {sub?.name?.charAt(0).toUpperCase() || '?'}
+    <div className="rounded-lg border border-slate-100 dark:border-slate-700/60 bg-slate-50/40 dark:bg-slate-900/20 p-3 sm:p-2 sm:bg-slate-50/40 sm:border-0">
+      {/* Mobile-first stacked layout */}
+      <div className="sm:hidden space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-sm font-semibold shrink-0">
+              {sub?.name?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                {sub?.name || 'Unknown sub'}
+              </p>
+              {sub?.trade && (
+                <p className="text-xs text-slate-400 truncate">{sub.trade}</p>
+              )}
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
-              {sub?.name || 'Unknown sub'}
-            </p>
-            {sub?.trade && (
-              <p className="text-xs text-slate-400 truncate">{sub.trade}</p>
+          <Badge
+            variant="secondary"
+            className={cn(
+              'capitalize text-xs flex items-center gap-1 shrink-0',
+              STATUS_BADGE[assignment.status]?.className
             )}
-          </div>
+          >
+            <StatusIcon className="w-3 h-3" />
+            {STATUS_BADGE[assignment.status]?.label}
+          </Badge>
         </div>
-      </div>
 
-      {/* Scope */}
-      <div className="col-span-12 sm:col-span-3">
         <Input
           value={scope}
           onChange={(e) => setScope(e.target.value)}
           onBlur={() => commitField('scope', scope)}
           placeholder="Scope of work"
-          className="h-9 text-sm"
+          className="h-11 text-base"
         />
-      </div>
 
-      {/* Amount */}
-      <div className="col-span-6 sm:col-span-2 relative">
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
-          $
-        </span>
-        <Input
-          type="number"
-          min="0"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-          onBlur={() => commitField('amount', amount)}
-          className="h-9 text-sm pl-6 text-right"
-          aria-label="Amount due"
-        />
-      </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="min-w-0">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Amount
+            </label>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">
+                $
+              </span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                onBlur={() => commitField('amount', amount)}
+                className="h-11 text-base pl-6 text-right"
+              />
+            </div>
+          </div>
+          <div className="min-w-0">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+              Paid
+            </label>
+            <div className="relative">
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-base pointer-events-none">
+                $
+              </span>
+              <Input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={amountPaid}
+                onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+                onBlur={() => commitField('amount_paid', amountPaid)}
+                className="h-11 text-base pl-6 text-right"
+              />
+            </div>
+          </div>
+        </div>
 
-      {/* Paid */}
-      <div className="col-span-6 sm:col-span-2 relative">
-        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
-          $
-        </span>
-        <Input
-          type="number"
-          min="0"
-          step="0.01"
-          value={amountPaid}
-          onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-          onBlur={() => commitField('amount_paid', amountPaid)}
-          className="h-9 text-sm pl-6 text-right"
-          aria-label="Amount paid"
-        />
-      </div>
-
-      {/* Status + actions */}
-      <div className="col-span-12 sm:col-span-2 flex items-center justify-between sm:justify-end gap-1">
-        <Badge
-          variant="secondary"
-          className={cn(
-            'capitalize text-xs flex items-center gap-1 shrink-0',
-            STATUS_BADGE[assignment.status]?.className
+        <div className="flex items-center justify-end gap-2 pt-1">
+          {assignment.status !== 'paid' && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onMarkPaid}
+              className="h-10 text-emerald-600 hover:text-emerald-700 border-emerald-200 dark:border-emerald-900"
+            >
+              Mark paid
+            </Button>
           )}
-        >
-          <StatusIcon className="w-3 h-3" />
-          {STATUS_BADGE[assignment.status]?.label}
-        </Badge>
-        {assignment.status !== 'paid' && (
           <Button
             type="button"
-            size="sm"
             variant="ghost"
-            onClick={onMarkPaid}
-            className="h-8 text-emerald-600 hover:text-emerald-700"
-            title="Mark fully paid"
+            size="icon"
+            onClick={onDelete}
+            className="h-10 w-10 text-slate-400 hover:text-red-600"
+            aria-label="Remove"
           >
-            Pay
+            <Trash2 className="w-4 h-4" />
           </Button>
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onDelete}
-          className="h-8 w-8 text-slate-400 hover:text-red-600"
-          aria-label="Remove"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </Button>
+        </div>
+      </div>
+
+      {/* Desktop layout */}
+      <div className="hidden sm:grid grid-cols-12 gap-2 items-start">
+        <div className="col-span-3 min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+              {sub?.name?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">
+                {sub?.name || 'Unknown sub'}
+              </p>
+              {sub?.trade && (
+                <p className="text-xs text-slate-400 truncate">{sub.trade}</p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="col-span-3 min-w-0">
+          <Input
+            value={scope}
+            onChange={(e) => setScope(e.target.value)}
+            onBlur={() => commitField('scope', scope)}
+            placeholder="Scope of work"
+            className="h-9 text-sm"
+          />
+        </div>
+        <div className="col-span-2 min-w-0 relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+            $
+          </span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+            onBlur={() => commitField('amount', amount)}
+            className="h-9 text-sm pl-6 text-right"
+            aria-label="Amount due"
+          />
+        </div>
+        <div className="col-span-2 min-w-0 relative">
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">
+            $
+          </span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            value={amountPaid}
+            onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
+            onBlur={() => commitField('amount_paid', amountPaid)}
+            className="h-9 text-sm pl-6 text-right"
+            aria-label="Amount paid"
+          />
+        </div>
+        <div className="col-span-2 flex items-center justify-end gap-1">
+          <Badge
+            variant="secondary"
+            className={cn(
+              'capitalize text-xs flex items-center gap-1 shrink-0',
+              STATUS_BADGE[assignment.status]?.className
+            )}
+          >
+            <StatusIcon className="w-3 h-3" />
+            {STATUS_BADGE[assignment.status]?.label}
+          </Badge>
+          {assignment.status !== 'paid' && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={onMarkPaid}
+              className="h-8 text-emerald-600 hover:text-emerald-700"
+              title="Mark fully paid"
+            >
+              Pay
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onDelete}
+            className="h-9 w-9 text-slate-400 hover:text-red-600"
+            aria-label="Remove"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </div>
     </div>
   );

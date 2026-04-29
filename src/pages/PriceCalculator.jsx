@@ -11,6 +11,7 @@ import {
   Hammer,
   Link2,
   Loader2,
+  LogIn,
   MoreHorizontal,
   Package,
   Percent,
@@ -107,6 +108,7 @@ const PercentInput = ({ label, value, onChange, icon: Icon, description }) => (
       </div>
       <Input
         type="number"
+        inputMode="decimal"
         min="0"
         max="100"
         step="0.1"
@@ -127,7 +129,7 @@ const BreakdownRow = ({ label, value, isTotal, isSubtotal, delay = 0 }) => (
     initial={{ opacity: 0, x: -10 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay, duration: 0.3 }}
-    className={`flex justify-between items-center py-3 ${
+    className={`flex justify-between items-center gap-3 py-3 min-w-0 ${
       isTotal
         ? 'border-t-2 border-emerald-400 pt-4 mt-2'
         : isSubtotal
@@ -136,23 +138,23 @@ const BreakdownRow = ({ label, value, isTotal, isSubtotal, delay = 0 }) => (
     }`}
   >
     <span
-      className={`${
+      className={`min-w-0 truncate ${
         isTotal
-          ? 'font-semibold text-slate-200 text-lg'
+          ? 'font-semibold text-slate-200 text-base sm:text-lg'
           : isSubtotal
-            ? 'font-medium text-slate-300'
-            : 'text-slate-400'
+            ? 'font-medium text-slate-300 text-sm sm:text-base'
+            : 'text-slate-400 text-sm sm:text-base'
       }`}
     >
       {label}
     </span>
     <span
-      className={`font-mono ${
+      className={`font-mono shrink-0 ${
         isTotal
-          ? 'text-2xl font-bold text-emerald-400'
+          ? 'text-xl sm:text-2xl font-bold text-emerald-400'
           : isSubtotal
-            ? 'text-lg font-semibold text-white'
-            : 'text-white font-semibold'
+            ? 'text-base sm:text-lg font-semibold text-white'
+            : 'text-sm sm:text-base text-white font-semibold'
       }`}
     >
       ${(Number(value) || 0).toLocaleString('en-US', {
@@ -409,7 +411,7 @@ export default function PriceCalculator() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-950/30">
+      <div className="min-h-screen overflow-x-clip bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-950/30">
         <nav
           className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40"
           style={{ paddingTop: 'env(safe-area-inset-top)' }}
@@ -520,9 +522,10 @@ export default function PriceCalculator() {
                 </>
               ) : (
                 <Link to="/Profile">
-                  <Button size="sm" variant="outline">
-                    <FileText className="w-4 h-4 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Sign in to save</span>
+                  <Button size="sm" variant="outline" className="h-9">
+                    <LogIn className="w-4 h-4 mr-1.5" />
+                    <span className="hidden xs:inline sm:inline">Sign in</span>
+                    <span className="xs:hidden sm:hidden">Sign in</span>
                   </Button>
                 </Link>
               )}
@@ -590,13 +593,13 @@ export default function PriceCalculator() {
             </motion.div>
           )}
 
-          <div className="grid lg:grid-cols-5 gap-6 lg:gap-8">
+          <div className="grid lg:grid-cols-5 gap-6 lg:gap-8 min-w-0">
             {/* Inputs */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="lg:col-span-3 space-y-5"
+              className="lg:col-span-3 space-y-5 min-w-0"
             >
               {CATEGORY_CONFIG.map((cfg) => (
                 <LineItemEditor
@@ -675,7 +678,7 @@ export default function PriceCalculator() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="lg:col-span-2"
+              className="lg:col-span-2 min-w-0"
             >
               <Card className="border-0 shadow-xl shadow-emerald-900/10 bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 text-white sticky top-20">
                 <CardHeader className="pb-2">
@@ -763,11 +766,11 @@ export default function PriceCalculator() {
                     transition={{ delay: 0.5 }}
                     className="mt-4 p-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600"
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-emerald-50">
+                    <div className="flex justify-between items-center gap-3 min-w-0">
+                      <span className="font-semibold text-emerald-50 shrink-0">
                         Selling Price
                       </span>
-                      <span className="text-3xl font-bold text-white font-mono">
+                      <span className="text-2xl sm:text-3xl font-bold text-white font-mono truncate text-right">
                         ${calculations.selling_price.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -783,11 +786,11 @@ export default function PriceCalculator() {
                       transition={{ delay: 0.55 }}
                       className="mt-3 p-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600"
                     >
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold text-blue-50">
+                      <div className="flex justify-between items-center gap-3 min-w-0">
+                        <span className="font-semibold text-blue-50 shrink-0">
                           Finance Price
                         </span>
-                        <span className="text-3xl font-bold text-white font-mono">
+                        <span className="text-2xl sm:text-3xl font-bold text-white font-mono truncate text-right">
                           ${calculations.finance_price.toLocaleString('en-US', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
