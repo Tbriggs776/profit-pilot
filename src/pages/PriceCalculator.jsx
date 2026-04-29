@@ -89,16 +89,33 @@ const BreakdownRow = ({ label, value, isTotal, isSubtotal, delay = 0 }) => (
   </motion.div>
 );
 
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from "lucide-react";
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { ArrowLeft, Save, FileText, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import PullToRefresh from "../components/PullToRefresh";
 import { analytics } from "@/api/analytics";
 import { useEffect, useRef } from "react";
 import { useOrg } from "@/lib/OrgContext";
+import { useAuth } from "@/lib/AuthContext";
+import {
+  getEstimate,
+  createEstimate,
+  updateEstimate,
+} from "@/api/estimates";
+import SaveEstimateDialog from "@/components/SaveEstimateDialog";
 
 export default function PriceCalculator() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const estimateId = searchParams.get('id');
   const { activeOrg } = useOrg();
+  const { user, isAuthenticated } = useAuth();
+
+  const [loadedEstimate, setLoadedEstimate] = useState(null);
+  const [loadingEstimate, setLoadingEstimate] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedFlash, setSavedFlash] = useState(null);
 
   useEffect(() => {
     analytics.track({ eventName: 'page_view', properties: { page: 'PriceCalculator' } });
@@ -114,9 +131,10 @@ export default function PriceCalculator() {
   const [financeRate, setFinanceRate] = useState(0);
   const [grossMarginRate, setGrossMarginRate] = useState(25);
 
-  // Apply org defaults when an org becomes active (only once per org)
+  // Apply org defaults when an org becomes active (only once per org, and only when not editing)
   const appliedOrgRef = useRef(null);
   useEffect(() => {
+    if (estimateId) return; // editing — don't override with org defaults
     if (!activeOrg || appliedOrgRef.current === activeOrg.id) return;
     appliedOrgRef.current = activeOrg.id;
     if (activeOrg.default_tax_rate != null)
@@ -129,7 +147,87 @@ export default function PriceCalculator() {
       setWarrantyRate(Number(activeOrg.default_warranty));
     if (activeOrg.default_finance_rate != null)
       setFinanceRate(Number(activeOrg.default_finance_rate));
-  }, [activeOrg]);
+  }, [activeOrg, estimateId]);
+
+  // Load estimate from URL param
+  useEffect(() => {
+    if (!estimateId) {
+      setLoadedEstimate(null);
+      return;
+    }
+    setLoadingEstimate(true);
+    (async () => {
+      try {
+        const est = await getEstimate(estimateId);
+        setLoadedEstimate(est);
+        setEquipment(Number(est.equipment) || 0);
+        setMaterial(Number(est.material) || 0);
+        setLabor(Number(est.labor) || 0);
+        setSubContractor(Number(est.sub_contractor) || 0);
+        setCustomPassThrough(Number(est.custom_pass_through) || 0);
+        setCommissionRate(Number(est.commission_rate) || 0);
+        setWarrantyRate(Number(est.warranty_rate) || 0);
+        setSalesTaxRate(Number(est.sales_tax_rate) || 0);
+        setFinanceRate(Number(est.finance_rate) || 0);
+        setGrossMarginRate(Number(est.gross_margin_rate) || 25);
+      } catch (err) {
+        console.error('Failed to load estimate:', err);
+      } finally {
+        setLoadingEstimate(false);
+      }
+    })();
+  }, [estimateId]);
+
+  const inputsSnapshot = () => ({
+    equipment,
+    material,
+    labor,
+    sub_contractor: subContractor,
+    custom_pass_through: customPassThrough,
+    commission_rate: commissionRate,
+    warranty_rate: warrantyRate,
+    sales_tax_rate: salesTaxRate,
+    finance_rate: financeRate,
+    gross_margin_rate: grossMarginRate,
+  });
+
+  const handleSave = async ({ title, customerId, status, notes }) => {
+    if (!activeOrg || !user) return;
+    setSaving(true);
+    try {
+      if (loadedEstimate?.id) {
+        const updated = await updateEstimate({
+          id: loadedEstimate.id,
+          orgId: activeOrg.id,
+          customerId,
+          title,
+          status,
+          notes,
+          inputs: inputsSnapshot(),
+        });
+        setLoadedEstimate(updated);
+      } else {
+        const created = await createEstimate({
+          orgId: activeOrg.id,
+          userId: user.id,
+          customerId,
+          title,
+          status,
+          notes,
+          inputs: inputsSnapshot(),
+        });
+        setLoadedEstimate(created);
+        setSearchParams({ id: created.id }, { replace: true });
+      }
+      setSaveDialogOpen(false);
+      setSavedFlash(Date.now());
+      setTimeout(() => setSavedFlash(null), 2000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canSave = isAuthenticated && activeOrg;
 
   const calculations = useMemo(() => {
     // Iterative calculation (commission and warranty depend on selling price)
@@ -224,30 +322,81 @@ export default function PriceCalculator() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-950/30">
       {/* Top Navigation Bar */}
       <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate(canSave ? '/Estimates' : '/')}
             className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors select-none"
           >
             <ArrowLeft className="w-5 h-5 select-none" />
-            <span className="font-medium">Back</span>
+            <span className="font-medium hidden sm:inline">{canSave ? 'Estimates' : 'Home'}</span>
           </button>
-          {activeOrg && (
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              {activeOrg.logo_url && (
-                <img
-                  src={activeOrg.logo_url}
-                  alt=""
-                  className="w-6 h-6 rounded object-contain"
-                />
-              )}
-              <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
-                {activeOrg.business_name}
+
+          <div className="flex items-center gap-3 min-w-0">
+            {activeOrg && (
+              <div className="hidden md:flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 min-w-0">
+                {activeOrg.logo_url && (
+                  <img
+                    src={activeOrg.logo_url}
+                    alt=""
+                    className="w-6 h-6 rounded object-contain shrink-0"
+                  />
+                )}
+                <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
+                  {activeOrg.business_name}
+                </span>
+              </div>
+            )}
+
+            {loadingEstimate && (
+              <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+            )}
+
+            {savedFlash && (
+              <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                Saved
               </span>
-            </div>
-          )}
+            )}
+
+            {canSave ? (
+              <Button
+                size="sm"
+                onClick={() => setSaveDialogOpen(true)}
+                disabled={saving}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Save className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">
+                  {loadedEstimate?.id ? 'Update' : 'Save'}
+                </span>
+              </Button>
+            ) : (
+              <Link to="/Profile">
+                <Button size="sm" variant="outline">
+                  <FileText className="w-4 h-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Sign in to save</span>
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
+
+        {loadedEstimate?.title && (
+          <div className="max-w-6xl mx-auto px-4 pb-2 -mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              Editing: <span className="font-medium text-slate-700 dark:text-slate-300">{loadedEstimate.title}</span>
+              {loadedEstimate.customer?.name && <span> · {loadedEstimate.customer.name}</span>}
+            </p>
+          </div>
+        )}
       </nav>
+
+      <SaveEstimateDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        initial={loadedEstimate}
+        onSave={handleSave}
+        saving={saving}
+      />
       
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Header */}

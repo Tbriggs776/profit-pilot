@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Calculator, BarChart2, UserCircle } from 'lucide-react';
+import { Home, Calculator, FileText, UserCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 // Store scroll positions for each page
@@ -32,7 +32,7 @@ export default function Layout({ children, currentPageName }) {
     }
   }, [currentPageName]);
   
-  const pageIndex = currentPageName === 'Home' ? 0 : currentPageName === 'PriceCalculator' ? 1 : currentPageName === 'Analytics' ? 2 : 3;
+  const pageIndex = currentPageName === 'Home' ? 0 : currentPageName === 'PriceCalculator' ? 1 : currentPageName === 'Estimates' ? 2 : 3;
   
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
@@ -78,16 +78,16 @@ export default function Layout({ children, currentPageName }) {
             <span className="text-xs font-medium">Calculator</span>
           </Link>
 
-          <Link 
-            to="/Analytics" 
+          <Link
+            to="/Estimates"
             className={`flex flex-col items-center justify-center flex-1 select-none ${
-              currentPageName === 'Analytics' 
-                ? 'text-emerald-600 dark:text-emerald-400' 
+              currentPageName === 'Estimates'
+                ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-slate-600 dark:text-slate-400'
             }`}
           >
-            <BarChart2 className="w-6 h-6 mb-1" />
-            <span className="text-xs font-medium">Analytics</span>
+            <FileText className="w-6 h-6 mb-1" />
+            <span className="text-xs font-medium">Estimates</span>
           </Link>
 
           <Link 
