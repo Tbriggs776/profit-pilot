@@ -93,10 +93,12 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from "lucide-react";
 import PullToRefresh from "../components/PullToRefresh";
 import { analytics } from "@/api/analytics";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useOrg } from "@/lib/OrgContext";
 
 export default function PriceCalculator() {
   const navigate = useNavigate();
+  const { activeOrg } = useOrg();
 
   useEffect(() => {
     analytics.track({ eventName: 'page_view', properties: { page: 'PriceCalculator' } });
@@ -111,6 +113,23 @@ export default function PriceCalculator() {
   const [salesTaxRate, setSalesTaxRate] = useState(8.25);
   const [financeRate, setFinanceRate] = useState(0);
   const [grossMarginRate, setGrossMarginRate] = useState(25);
+
+  // Apply org defaults when an org becomes active (only once per org)
+  const appliedOrgRef = useRef(null);
+  useEffect(() => {
+    if (!activeOrg || appliedOrgRef.current === activeOrg.id) return;
+    appliedOrgRef.current = activeOrg.id;
+    if (activeOrg.default_tax_rate != null)
+      setSalesTaxRate(Number(activeOrg.default_tax_rate));
+    if (activeOrg.default_margin != null)
+      setGrossMarginRate(Number(activeOrg.default_margin));
+    if (activeOrg.default_commission != null)
+      setCommissionRate(Number(activeOrg.default_commission));
+    if (activeOrg.default_warranty != null)
+      setWarrantyRate(Number(activeOrg.default_warranty));
+    if (activeOrg.default_finance_rate != null)
+      setFinanceRate(Number(activeOrg.default_finance_rate));
+  }, [activeOrg]);
 
   const calculations = useMemo(() => {
     // Iterative calculation (commission and warranty depend on selling price)
@@ -186,17 +205,17 @@ export default function PriceCalculator() {
   }, [equipment, material, labor, commissionRate, subContractor, warrantyRate, customPassThrough, salesTaxRate, financeRate, grossMarginRate]);
 
   const handleRefresh = async () => {
-    // Reset all inputs
+    // Reset to org defaults (or app defaults if no org)
     setEquipment(0);
     setMaterial(0);
     setLabor(0);
-    setCommissionRate(0);
     setSubContractor(0);
-    setWarrantyRate(0);
     setCustomPassThrough(0);
-    setSalesTaxRate(8.25);
-    setFinanceRate(0);
-    setGrossMarginRate(25);
+    setSalesTaxRate(Number(activeOrg?.default_tax_rate ?? 8.25));
+    setGrossMarginRate(Number(activeOrg?.default_margin ?? 25));
+    setCommissionRate(Number(activeOrg?.default_commission ?? 0));
+    setWarrantyRate(Number(activeOrg?.default_warranty ?? 0));
+    setFinanceRate(Number(activeOrg?.default_finance_rate ?? 0));
     await new Promise(resolve => setTimeout(resolve, 1000));
   };
 
@@ -205,14 +224,28 @@ export default function PriceCalculator() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-emerald-950/30">
       {/* Top Navigation Bar */}
       <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center">
-          <button 
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
+          <button
             onClick={() => navigate('/')}
             className="flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors select-none"
           >
             <ArrowLeft className="w-5 h-5 select-none" />
             <span className="font-medium">Back</span>
           </button>
+          {activeOrg && (
+            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+              {activeOrg.logo_url && (
+                <img
+                  src={activeOrg.logo_url}
+                  alt=""
+                  className="w-6 h-6 rounded object-contain"
+                />
+              )}
+              <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[180px]">
+                {activeOrg.business_name}
+              </span>
+            </div>
+          )}
         </div>
       </nav>
       
