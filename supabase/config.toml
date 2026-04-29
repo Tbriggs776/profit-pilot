@@ -1,0 +1,4 @@
+project_id = "profit-pilot"
+
+[functions.getAnalytics]
+verify_jwt = true
