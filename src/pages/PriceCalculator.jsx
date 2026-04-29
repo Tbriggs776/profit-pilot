@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
+  Bookmark,
   Calculator,
   CreditCard,
   Download,
@@ -29,7 +30,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ShareEstimate from '@/components/ShareEstimate';
+import SaveAsTemplateDialog from '@/components/SaveAsTemplateDialog';
+import TemplateGallery from '@/components/TemplateGallery';
 import { downloadEstimatePDF } from '@/lib/pdf';
+import { getTemplateWithLines, linesFromTemplate } from '@/api/templates';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -171,6 +175,7 @@ export default function PriceCalculator() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const estimateId = searchParams.get('id');
+  const templateId = searchParams.get('template');
   const { activeOrg } = useOrg();
   const { user, isAuthenticated } = useAuth();
 
@@ -185,6 +190,8 @@ export default function PriceCalculator() {
   const [loadingEstimate, setLoadingEstimate] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [saveAsTemplateOpen, setSaveAsTemplateOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -213,6 +220,33 @@ export default function PriceCalculator() {
     if (activeOrg.default_finance_rate != null)
       setFinanceRate(Number(activeOrg.default_finance_rate));
   }, [activeOrg, estimateId]);
+
+  // Load template by ?template= and prefill (only when not editing existing)
+  useEffect(() => {
+    if (!templateId || estimateId) return;
+    (async () => {
+      try {
+        const { template, lines: tplLines } = await getTemplateWithLines(templateId);
+        if (tplLines.length) setLines(linesFromTemplate(tplLines));
+        // Apply rates that the template explicitly defines (NULL means inherit)
+        if (template.commission_rate != null)
+          setCommissionRate(Number(template.commission_rate));
+        if (template.warranty_rate != null)
+          setWarrantyRate(Number(template.warranty_rate));
+        if (template.sales_tax_rate != null)
+          setSalesTaxRate(Number(template.sales_tax_rate));
+        if (template.finance_rate != null)
+          setFinanceRate(Number(template.finance_rate));
+        if (template.gross_margin_rate != null)
+          setGrossMarginRate(Number(template.gross_margin_rate));
+        // Strip the template param so a refresh doesn't re-prefill
+        setSearchParams({}, { replace: true });
+      } catch (err) {
+        console.error('Failed to load template:', err);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateId]);
 
   // Load an estimate (with line items) when ?id= is present
   useEffect(() => {
@@ -428,44 +462,60 @@ export default function PriceCalculator() {
                       {isSavedEstimate ? 'Update' : 'Save'}
                     </span>
                   </Button>
-                  {isSavedEstimate && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button size="sm" variant="outline" aria-label="More actions">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem
-                          onClick={handleDownloadPdf}
-                          disabled={generatingPdf}
-                        >
-                          {generatingPdf ? (
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          ) : (
-                            <Download className="w-4 h-4 mr-2" />
-                          )}
-                          Download PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
-                          <Link2 className="w-4 h-4 mr-2" />
-                          Share public link
-                          {loadedEstimate.is_public && (
-                            <span className="ml-auto text-xs text-emerald-600 font-medium">
-                              On
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => navigate('/Estimates')}
-                        >
-                          <FileText className="w-4 h-4 mr-2" />
-                          All estimates
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" aria-label="More actions">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => setGalleryOpen(true)}>
+                        <Sparkles className="w-4 h-4 mr-2 text-emerald-600" />
+                        Start from template
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setSaveAsTemplateOpen(true)}
+                      >
+                        <Bookmark className="w-4 h-4 mr-2" />
+                        Save as template
+                      </DropdownMenuItem>
+
+                      {isSavedEstimate && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={handleDownloadPdf}
+                            disabled={generatingPdf}
+                          >
+                            {generatingPdf ? (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            ) : (
+                              <Download className="w-4 h-4 mr-2" />
+                            )}
+                            Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setShareDialogOpen(true)}
+                          >
+                            <Link2 className="w-4 h-4 mr-2" />
+                            Share public link
+                            {loadedEstimate.is_public && (
+                              <span className="ml-auto text-xs text-emerald-600 font-medium">
+                                On
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => navigate('/Estimates')}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            All estimates
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               ) : (
                 <Link to="/Profile">
@@ -509,6 +559,16 @@ export default function PriceCalculator() {
             onChanged={(updated) => setLoadedEstimate(updated)}
           />
         )}
+
+        <SaveAsTemplateDialog
+          open={saveAsTemplateOpen}
+          onOpenChange={setSaveAsTemplateOpen}
+          defaultName={loadedEstimate?.title}
+          rates={ratesSnapshot()}
+          lines={lines}
+        />
+
+        <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           {!loadedEstimate && (

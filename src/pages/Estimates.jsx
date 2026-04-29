@@ -12,7 +12,9 @@ import {
   User,
   TrendingUp,
   Link2,
+  Sparkles,
 } from 'lucide-react';
+import TemplateGallery from '@/components/TemplateGallery';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +71,7 @@ export default function Estimates() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
 
   useEffect(() => {
     analytics.track({
@@ -216,18 +219,30 @@ export default function Estimates() {
               · {activeOrg.business_name}
             </span>
           </div>
-          <Link to="/PriceCalculator">
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              variant="outline"
+              onClick={() => setGalleryOpen(true)}
             >
-              <Plus className="w-4 h-4 mr-1" />
-              <span className="hidden sm:inline">New estimate</span>
-              <span className="sm:hidden">New</span>
+              <Sparkles className="w-4 h-4 mr-1 text-emerald-600" />
+              <span className="hidden sm:inline">Templates</span>
             </Button>
-          </Link>
+            <Link to="/PriceCalculator">
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">New estimate</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
+
+      <TemplateGallery open={galleryOpen} onOpenChange={setGalleryOpen} />
 
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Stats row */}
