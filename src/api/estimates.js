@@ -342,6 +342,45 @@ export const duplicateEstimate = async (id, userId) => {
   return dup;
 };
 
+/**
+ * Customer-facing view of line items.
+ *
+ * Internal lines store our COST per unit. The customer must never see those
+ * raw costs — that would expose our margin. This helper pro-rata-allocates the
+ * marked-up portion of the selling price across direct-cost lines so each
+ * line displays the price the customer is actually charged.
+ *
+ * - Direct-cost categories (equipment, material, labor, sub_contractor) absorb
+ *   their share of (selling_price - pass-through). Warranty and the implied
+ *   sales-tax markup are baked in invisibly.
+ * - Pass-through lines keep their original price (they're literally passed
+ *   through at cost by definition).
+ *
+ * Sum of resulting line totals = estimate.selling_price.
+ */
+export const getCustomerFacingLines = (lines, estimate) => {
+  if (!Array.isArray(lines) || !lines.length) return [];
+  const sellingPrice = Number(estimate?.selling_price) || 0;
+
+  const directLines = lines.filter((l) => l.category !== 'custom_pass_through');
+  const passLines = lines.filter((l) => l.category === 'custom_pass_through');
+
+  const totalDirectCost = directLines.reduce((s, l) => s + lineTotal(l), 0);
+  const totalPassThrough = passLines.reduce((s, l) => s + lineTotal(l), 0);
+  const directRetailTotal = Math.max(0, sellingPrice - totalPassThrough);
+
+  return lines.map((line) => {
+    if (line.category === 'custom_pass_through') return { ...line };
+
+    const cost = lineTotal(line);
+    const share = totalDirectCost > 0 ? cost / totalDirectCost : 0;
+    const customerLineTotal = share * directRetailTotal;
+    const qty = Number(line.quantity) || 1;
+    const customerUnitPrice = qty > 0 ? customerLineTotal / qty : 0;
+    return { ...line, unit_price: customerUnitPrice };
+  });
+};
+
 // Backwards-compat helper: turn an estimate that has no line items
 // into a default set (one line per category) using the lump-sum columns.
 export const synthesizeLinesFromLumpSums = (estimate) => {

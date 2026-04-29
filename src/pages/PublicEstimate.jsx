@@ -5,7 +5,7 @@ import { Download, Loader2, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/api/supabaseClient';
 import { downloadEstimatePDF } from '@/lib/pdf';
-import { lineTotal } from '@/api/estimates';
+import { getCustomerFacingLines, lineTotal } from '@/api/estimates';
 import { format } from 'date-fns';
 
 const CATEGORY_LABELS = {
@@ -94,20 +94,26 @@ export default function PublicEstimate() {
     };
   }, [token]);
 
+  const customerLines = useMemo(
+    () =>
+      data ? getCustomerFacingLines(data.lines, data.estimate) : [],
+    [data]
+  );
+
   const grouped = useMemo(() => {
-    if (!data?.lines) return {};
     const out = {};
-    data.lines.forEach((l) => {
+    customerLines.forEach((l) => {
       if (!out[l.category]) out[l.category] = [];
       out[l.category].push(l);
     });
     return out;
-  }, [data?.lines]);
+  }, [customerLines]);
 
   const handleDownload = async () => {
     if (!data) return;
     setGenerating(true);
     try {
+      // PDF generator applies its own customer-facing transform — pass raw lines
       await downloadEstimatePDF({
         estimate: data.estimate,
         lines: data.lines,

@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import { lineTotal } from '@/api/estimates';
+import { getCustomerFacingLines, lineTotal } from '@/api/estimates';
 
 const COLORS = {
   emerald: [16, 185, 129],
@@ -246,27 +246,8 @@ const drawTotals = (doc, estimate, startY, pageWidth) => {
   const boxX = pageWidth - margin - boxWidth;
   let y = startY;
 
-  const rows = [
-    ['Subtotal (direct costs)', estimate.direct_costs],
-    estimate.warranty_rate > 0
-      ? [`Warranty (${estimate.warranty_rate}%)`, estimate.selling_price * (Number(estimate.warranty_rate) / 100)]
-      : null,
-    estimate.custom_pass_through > 0
-      ? ['Pass-through', estimate.custom_pass_through]
-      : null,
-  ].filter(Boolean);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(...COLORS.slate600);
-  rows.forEach(([label, value]) => {
-    doc.text(label, boxX, y);
-    doc.text(fmtCurrency(value), boxX + boxWidth, y, { align: 'right' });
-    y += 16;
-  });
-
-  // Selling price band
-  y += 6;
+  // Selling price band (no cost-exposing subtotal — line items already show
+  // customer-facing retail prices that sum to selling_price)
   doc.setFillColor(...COLORS.emerald);
   doc.rect(boxX, y - 14, boxWidth, 32, 'F');
   doc.setTextColor(...COLORS.white);
@@ -354,10 +335,13 @@ export const generateEstimatePDF = async ({ estimate, lines, org, customer }) =>
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageWidth = doc.internal.pageSize.getWidth();
 
+  // Hide cost basis from the customer: pro-rata distribute margin across lines
+  const customerLines = getCustomerFacingLines(lines, estimate);
+
   let y = await drawHeader(doc, org, pageWidth);
   y = drawProposalMeta(doc, estimate, y, pageWidth);
   y = drawCustomerBlock(doc, customer, y);
-  y = drawLineItemsTable(doc, lines, y, pageWidth);
+  y = drawLineItemsTable(doc, customerLines, y, pageWidth);
   y = drawTotals(doc, estimate, y, pageWidth);
   y = drawNotes(doc, estimate, y, pageWidth);
   drawSignature(doc, y, pageWidth);
