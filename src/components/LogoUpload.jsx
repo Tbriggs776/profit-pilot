@@ -5,7 +5,7 @@ import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { useOrg } from '@/lib/OrgContext';
 
 const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml';
-const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_BYTES = 10 * 1024 * 1024;
 
 export default function LogoUpload({ org, onChange }) {
   const { updateOrg } = useOrg();
@@ -19,7 +19,7 @@ export default function LogoUpload({ org, onChange }) {
     setError(null);
 
     if (file.size > MAX_BYTES) {
-      setError('Logo must be under 2MB');
+      setError('Logo must be under 10MB');
       return;
     }
 
@@ -113,7 +113,7 @@ export default function LogoUpload({ org, onChange }) {
             </Button>
           )}
 
-          <p className="text-xs text-slate-400">PNG, JPG, WebP or SVG · max 2MB</p>
+          <p className="text-xs text-slate-400">PNG, JPG, WebP or SVG · max 10MB</p>
         </div>
       </div>
 
