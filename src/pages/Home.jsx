@@ -68,7 +68,7 @@ export default function Home() {
               <span className="font-bold tracking-tight">Profit Pilot</span>
               <Badge
                 variant="secondary"
-                className="ml-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-semibold uppercase tracking-wider"
+                className="ml-1 hidden min-[400px]:inline-flex bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-semibold uppercase tracking-wider"
               >
                 Beta · Free
               </Badge>
@@ -266,7 +266,7 @@ function HeroPreview() {
         </div>
       </div>
 
-      {/* Floating margin badge */}
+      {/* Floating margin badge (desktop) */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, x: -20 }}
         whileInView={{ opacity: 1, scale: 1, x: 0 }}
@@ -287,7 +287,7 @@ function HeroPreview() {
         </div>
       </motion.div>
 
-      {/* Floating share badge */}
+      {/* Floating share badge (desktop) */}
       <motion.div
         initial={{ opacity: 0, scale: 0.9, x: 20 }}
         whileInView={{ opacity: 1, scale: 1, x: 0 }}
@@ -305,6 +305,42 @@ function HeroPreview() {
           <p className="text-sm font-bold text-slate-900 dark:text-white">
             Shared with client
           </p>
+        </div>
+      </motion.div>
+
+      {/* Mobile chip row (under hero card) */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.5, duration: 0.4 }}
+        className="sm:hidden mt-4 grid grid-cols-2 gap-2"
+      >
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 px-3 py-2.5 flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-amber-50 dark:bg-amber-900/30 shrink-0">
+            <Target className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase font-bold tracking-wider text-slate-400 truncate">
+              Margin locked
+            </p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              $1,286 profit
+            </p>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 px-3 py-2.5 flex items-center gap-2">
+          <div className="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/30 shrink-0">
+            <Link2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[9px] uppercase font-bold tracking-wider text-slate-400 truncate">
+              Public link
+            </p>
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+              Shared with client
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

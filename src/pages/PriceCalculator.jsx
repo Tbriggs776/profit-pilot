@@ -460,10 +460,8 @@ export default function PriceCalculator() {
                     disabled={saving}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
-                    <Save className="w-4 h-4 sm:mr-1.5" />
-                    <span className="hidden sm:inline">
-                      {isSavedEstimate ? 'Update' : 'Save'}
-                    </span>
+                    <Save className="w-4 h-4 mr-1.5" />
+                    {isSavedEstimate ? 'Update' : 'Save'}
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
