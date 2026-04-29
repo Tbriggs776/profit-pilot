@@ -9,6 +9,9 @@ module.exports = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		backgroundImage: {
+  			'gradient-radial': 'radial-gradient(circle, var(--tw-gradient-stops))'
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
