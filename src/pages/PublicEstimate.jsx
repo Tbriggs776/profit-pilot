@@ -5,7 +5,7 @@ import { Download, Loader2, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/api/supabaseClient';
 import { downloadEstimatePDF } from '@/lib/pdf';
-import { getCustomerFacingLines, lineTotal } from '@/api/estimates';
+import { computeCustomerTax, getCustomerFacingLines, lineTotal } from '@/api/estimates';
 import { format } from 'date-fns';
 
 const CATEGORY_LABELS = {
@@ -97,6 +97,11 @@ export default function PublicEstimate() {
   const customerLines = useMemo(
     () =>
       data ? getCustomerFacingLines(data.lines, data.estimate) : [],
+    [data]
+  );
+
+  const taxBreakdown = useMemo(
+    () => (data ? computeCustomerTax(data.lines, data.estimate) : null),
     [data]
   );
 
@@ -289,12 +294,32 @@ export default function PublicEstimate() {
         {/* Totals */}
         <div className="mt-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="p-6 sm:p-8 space-y-4">
+            {Number(estimate.customer_sales_tax_rate) > 0 &&
+              taxBreakdown?.customer_sales_tax > 0 && (
+                <div className="space-y-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                    <span>Subtotal</span>
+                    <span className="font-mono">
+                      {formatCurrency(estimate.selling_price)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                    <span>
+                      Sales tax ({estimate.customer_sales_tax_rate}%)
+                    </span>
+                    <span className="font-mono">
+                      {formatCurrency(taxBreakdown.customer_sales_tax)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
             <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-5">
               <p className="text-xs font-bold tracking-wider text-emerald-50 uppercase">
                 Total
               </p>
               <p className="text-3xl sm:text-4xl font-bold text-white font-mono mt-1">
-                {formatCurrency(estimate.selling_price)}
+                {formatCurrency(taxBreakdown?.grand_total ?? estimate.selling_price)}
               </p>
             </div>
 

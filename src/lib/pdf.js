@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import { getCustomerFacingLines, lineTotal } from '@/api/estimates';
+import { computeCustomerTax, getCustomerFacingLines, lineTotal } from '@/api/estimates';
 
 const COLORS = {
   emerald: [16, 185, 129],
@@ -240,14 +240,32 @@ const drawLineItemsTable = (doc, lines, startY, pageWidth) => {
   return doc.lastAutoTable.finalY + 16;
 };
 
-const drawTotals = (doc, estimate, startY, pageWidth) => {
+const drawTotals = (doc, estimate, lines, startY, pageWidth) => {
   const margin = 40;
   const boxWidth = 240;
   const boxX = pageWidth - margin - boxWidth;
   let y = startY;
 
-  // Selling price band (no cost-exposing subtotal — line items already show
-  // customer-facing retail prices that sum to selling_price)
+  const customerTaxRate = Number(estimate.customer_sales_tax_rate) || 0;
+  const { customer_sales_tax: customerTax, grand_total: grandTotal } =
+    computeCustomerTax(lines, estimate);
+  const subtotal = Number(estimate.selling_price) || 0;
+  const showTaxLine = customerTaxRate > 0 && customerTax > 0;
+
+  // Subtotal + sales tax lines (only when customer tax applies)
+  if (showTaxLine) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...COLORS.slate600);
+    doc.text('Subtotal', boxX, y);
+    doc.text(fmtCurrency(subtotal), boxX + boxWidth, y, { align: 'right' });
+    y += 16;
+    doc.text(`Sales tax (${customerTaxRate}%)`, boxX, y);
+    doc.text(fmtCurrency(customerTax), boxX + boxWidth, y, { align: 'right' });
+    y += 18;
+  }
+
+  // Grand total band
   doc.setFillColor(...COLORS.emerald);
   doc.rect(boxX, y - 14, boxWidth, 32, 'F');
   doc.setTextColor(...COLORS.white);
@@ -255,7 +273,7 @@ const drawTotals = (doc, estimate, startY, pageWidth) => {
   doc.setFontSize(11);
   doc.text('TOTAL', boxX + 12, y + 4);
   doc.setFontSize(16);
-  doc.text(fmtCurrency(estimate.selling_price), boxX + boxWidth - 12, y + 6, {
+  doc.text(fmtCurrency(grandTotal), boxX + boxWidth - 12, y + 6, {
     align: 'right',
   });
   y += 28;
@@ -342,7 +360,7 @@ export const generateEstimatePDF = async ({ estimate, lines, org, customer }) =>
   y = drawProposalMeta(doc, estimate, y, pageWidth);
   y = drawCustomerBlock(doc, customer, y);
   y = drawLineItemsTable(doc, customerLines, y, pageWidth);
-  y = drawTotals(doc, estimate, y, pageWidth);
+  y = drawTotals(doc, estimate, lines, y, pageWidth);
   y = drawNotes(doc, estimate, y, pageWidth);
   drawSignature(doc, y, pageWidth);
   drawFooter(doc, org, pageWidth);

@@ -14,7 +14,8 @@ import LogoUpload from '@/components/LogoUpload';
 import { useOrg, CONTRACTOR_TYPES } from '@/lib/OrgContext';
 
 const PERCENT_FIELDS = [
-  ['default_tax_rate', 'Sales Tax %', 'Applied to equipment & material'],
+  ['default_tax_rate', 'Sales Tax (your cost) %', 'What you pay buying taxable supplies'],
+  ['default_customer_tax_rate', 'Sales Tax (charge customer) %', 'Added to retail on taxable items'],
   ['default_margin', 'Gross Margin %', 'Default target profit margin'],
   ['default_commission', 'Commission %', 'Default commission rate'],
   ['default_warranty', 'Warranty %', 'Default warranty rate'],
@@ -49,6 +50,7 @@ export default function OrgSettings() {
       await updateOrg(activeOrg.id, {
         ...form,
         default_tax_rate: parseFloat(form.default_tax_rate) || 0,
+        default_customer_tax_rate: parseFloat(form.default_customer_tax_rate) || 0,
         default_margin: parseFloat(form.default_margin) || 0,
         default_commission: parseFloat(form.default_commission) || 0,
         default_warranty: parseFloat(form.default_warranty) || 0,

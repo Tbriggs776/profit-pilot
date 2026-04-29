@@ -184,6 +184,7 @@ export default function PriceCalculator() {
 
   const [lines, setLines] = useState(() => initialScratchLines());
   const [salesTaxRate, setSalesTaxRate] = useState(8.25);
+  const [customerSalesTaxRate, setCustomerSalesTaxRate] = useState(0);
   const [commissionRate, setCommissionRate] = useState(0);
   const [warrantyRate, setWarrantyRate] = useState(0);
   const [financeRate, setFinanceRate] = useState(0);
@@ -222,6 +223,8 @@ export default function PriceCalculator() {
       setWarrantyRate(Number(activeOrg.default_warranty));
     if (activeOrg.default_finance_rate != null)
       setFinanceRate(Number(activeOrg.default_finance_rate));
+    if (activeOrg.default_customer_tax_rate != null)
+      setCustomerSalesTaxRate(Number(activeOrg.default_customer_tax_rate));
   }, [activeOrg, estimateId]);
 
   // Load template by ?template= and prefill (only when not editing existing)
@@ -271,6 +274,7 @@ export default function PriceCalculator() {
           : synthesizeLinesFromLumpSums(estimate);
         setLines(usable);
         setSalesTaxRate(Number(estimate.sales_tax_rate) || 0);
+        setCustomerSalesTaxRate(Number(estimate.customer_sales_tax_rate) || 0);
         setCommissionRate(Number(estimate.commission_rate) || 0);
         setWarrantyRate(Number(estimate.warranty_rate) || 0);
         setFinanceRate(Number(estimate.finance_rate) || 0);
@@ -290,8 +294,10 @@ export default function PriceCalculator() {
       commission_rate: commissionRate,
       warranty_rate: warrantyRate,
       sales_tax_rate: salesTaxRate,
+      customer_sales_tax_rate: customerSalesTaxRate,
       finance_rate: financeRate,
       gross_margin_rate: grossMarginRate,
+      lines,
     });
 
     const commission =
@@ -308,7 +314,7 @@ export default function PriceCalculator() {
     const financeMultiplier = 1 - Number(financeRate) / 100 || 0;
     const financeAmount =
       financeMultiplier > 0
-        ? totals.selling_price / financeMultiplier - totals.selling_price
+        ? totals.grand_total / financeMultiplier - totals.grand_total
         : 0;
 
     return {
@@ -325,6 +331,7 @@ export default function PriceCalculator() {
     commissionRate,
     warrantyRate,
     salesTaxRate,
+    customerSalesTaxRate,
     financeRate,
     grossMarginRate,
   ]);
@@ -333,6 +340,7 @@ export default function PriceCalculator() {
     commission_rate: commissionRate,
     warranty_rate: warrantyRate,
     sales_tax_rate: salesTaxRate,
+    customer_sales_tax_rate: customerSalesTaxRate,
     finance_rate: financeRate,
     gross_margin_rate: grossMarginRate,
   });
@@ -382,6 +390,7 @@ export default function PriceCalculator() {
     setCommissionRate(Number(activeOrg?.default_commission ?? 0));
     setWarrantyRate(Number(activeOrg?.default_warranty ?? 0));
     setFinanceRate(Number(activeOrg?.default_finance_rate ?? 0));
+    setCustomerSalesTaxRate(Number(activeOrg?.default_customer_tax_rate ?? 0));
     await new Promise((resolve) => setTimeout(resolve, 600));
   };
 
@@ -647,11 +656,18 @@ export default function PriceCalculator() {
                     description="% of total selling price"
                   />
                   <PercentInput
-                    label="Sales Tax Rate"
+                    label="Sales Tax (your cost)"
                     value={salesTaxRate || ''}
                     onChange={setSalesTaxRate}
                     icon={Receipt}
-                    description="Applied to taxable line items"
+                    description="What you pay buying taxable supplies"
+                  />
+                  <PercentInput
+                    label="Sales Tax (charge customer)"
+                    value={customerSalesTaxRate || ''}
+                    onChange={setCustomerSalesTaxRate}
+                    icon={Receipt}
+                    description="Added to retail on taxable items"
                   />
                   <PercentInput
                     label="Finance Fee"
@@ -752,11 +768,6 @@ export default function PriceCalculator() {
                     value={calculations.custom_pass_through}
                     delay={0.45}
                   />
-                  <BreakdownRow
-                    label={`Finance Fee (${financeRate}%)`}
-                    value={calculations.financeAmount}
-                    delay={0.48}
-                  />
 
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -777,11 +788,43 @@ export default function PriceCalculator() {
                     </div>
                   </motion.div>
 
+                  {customerSalesTaxRate > 0 && (
+                    <BreakdownRow
+                      label={`Customer Sales Tax (${customerSalesTaxRate}%)`}
+                      value={calculations.customer_sales_tax}
+                      delay={0.52}
+                    />
+                  )}
+
+                  {(customerSalesTaxRate > 0 || financeRate > 0) && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.54 }}
+                      className="mt-3 p-4 rounded-xl bg-slate-800/70 border border-emerald-500/30"
+                    >
+                      <div className="flex justify-between items-center gap-3 min-w-0">
+                        <span className="font-semibold text-slate-100 shrink-0">
+                          Grand Total
+                        </span>
+                        <span className="text-xl sm:text-2xl font-bold text-emerald-400 font-mono truncate text-right">
+                          ${calculations.grand_total.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        What the customer pays (cash)
+                      </p>
+                    </motion.div>
+                  )}
+
                   {financeRate > 0 && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.55 }}
+                      transition={{ delay: 0.56 }}
                       className="mt-3 p-4 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600"
                     >
                       <div className="flex justify-between items-center gap-3 min-w-0">
@@ -795,6 +838,9 @@ export default function PriceCalculator() {
                           })}
                         </span>
                       </div>
+                      <p className="text-[11px] text-blue-100/90 mt-1">
+                        Includes finance fee on grand total
+                      </p>
                     </motion.div>
                   )}
 

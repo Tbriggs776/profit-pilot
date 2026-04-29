@@ -90,9 +90,25 @@ export const computeTotals = (i) => {
   }
 
   const marginAmount = priceAfterMargin - directCosts;
+
+  // Customer-charged sales tax (separate from cost-side tax above).
+  // Distribute selling_price across direct-cost lines pro-rata to find
+  // the customer-facing retail of each line, then sum the taxable ones.
+  const customerSalesTaxRate = Number(i.customer_sales_tax_rate) || 0;
+  const customerLines =
+    Array.isArray(i.lines) && i.lines.length
+      ? distributeRetail(i.lines, sellingPrice, customPassThrough)
+      : [];
+  const customerTaxableRetail = customerLines
+    .filter((l) => l.taxable)
+    .reduce((s, l) => s + lineTotal(l), 0);
+  const customerSalesTax = customerTaxableRetail * (customerSalesTaxRate / 100);
+  const grandTotal = sellingPrice + customerSalesTax;
+
+  // Finance fee marks up the grand total (what the customer actually pays).
   const financeMultiplier = 1 - financeRate / 100;
-  const financePrice = financeMultiplier > 0 ? sellingPrice / financeMultiplier : 0;
-  const financeAmount = financePrice - sellingPrice;
+  const financePrice = financeMultiplier > 0 ? grandTotal / financeMultiplier : 0;
+  const financeAmount = financePrice - grandTotal;
   const totalCosts = directCosts + warranty + customPassThrough + financeAmount;
 
   return {
@@ -101,7 +117,27 @@ export const computeTotals = (i) => {
     margin_amount: marginAmount,
     direct_costs: directCosts,
     total_costs: totalCosts,
+    customer_sales_tax: customerSalesTax,
+    grand_total: grandTotal,
   };
+};
+
+// Pure helper used by both computeTotals (for cached customer tax) and
+// getCustomerFacingLines below. Allocates the marked-up sale across direct-
+// cost lines pro-rata; pass-through lines stay at cost.
+const distributeRetail = (lines, sellingPrice, totalPassThrough) => {
+  const directLines = lines.filter((l) => l.category !== 'custom_pass_through');
+  const totalDirectCost = directLines.reduce((s, l) => s + lineTotal(l), 0);
+  const directRetailTotal = Math.max(0, Number(sellingPrice) - Number(totalPassThrough || 0));
+  return lines.map((line) => {
+    if (line.category === 'custom_pass_through') return { ...line };
+    const cost = lineTotal(line);
+    const share = totalDirectCost > 0 ? cost / totalDirectCost : 0;
+    const customerLineTotal = share * directRetailTotal;
+    const qty = Number(line.quantity) || 1;
+    const customerUnitPrice = qty > 0 ? customerLineTotal / qty : 0;
+    return { ...line, unit_price: customerUnitPrice };
+  });
 };
 
 // Roll up line items into the lump-sum totals the estimate row caches.
@@ -122,6 +158,7 @@ const RATE_FIELDS = [
   'commission_rate',
   'warranty_rate',
   'sales_tax_rate',
+  'customer_sales_tax_rate',
   'finance_rate',
   'gross_margin_rate',
 ];
@@ -134,8 +171,9 @@ const buildEstimatePayload = ({
   notes,
   rates,
   rollup,
+  lines,
 }) => {
-  const totals = computeTotals({ ...rollup, ...rates });
+  const totals = computeTotals({ ...rollup, ...rates, lines });
   const rateNumbers = RATE_FIELDS.reduce((acc, key) => {
     acc[key] = Number(rates[key]) || 0;
     return acc;
@@ -235,6 +273,7 @@ export const createEstimate = async ({
       notes,
       rates,
       rollup,
+      lines,
     }),
     created_by: userId,
   };
@@ -271,6 +310,7 @@ export const updateEstimate = async ({
     notes,
     rates,
     rollup,
+    lines,
   });
   const { data: estimate, error } = await supabase
     .from('estimates')
@@ -361,24 +401,33 @@ export const duplicateEstimate = async (id, userId) => {
 export const getCustomerFacingLines = (lines, estimate) => {
   if (!Array.isArray(lines) || !lines.length) return [];
   const sellingPrice = Number(estimate?.selling_price) || 0;
+  const passThroughTotal = Number(estimate?.custom_pass_through) || 0;
+  return distributeRetail(lines, sellingPrice, passThroughTotal);
+};
 
-  const directLines = lines.filter((l) => l.category !== 'custom_pass_through');
-  const passLines = lines.filter((l) => l.category === 'custom_pass_through');
-
-  const totalDirectCost = directLines.reduce((s, l) => s + lineTotal(l), 0);
-  const totalPassThrough = passLines.reduce((s, l) => s + lineTotal(l), 0);
-  const directRetailTotal = Math.max(0, sellingPrice - totalPassThrough);
-
-  return lines.map((line) => {
-    if (line.category === 'custom_pass_through') return { ...line };
-
-    const cost = lineTotal(line);
-    const share = totalDirectCost > 0 ? cost / totalDirectCost : 0;
-    const customerLineTotal = share * directRetailTotal;
-    const qty = Number(line.quantity) || 1;
-    const customerUnitPrice = qty > 0 ? customerLineTotal / qty : 0;
-    return { ...line, unit_price: customerUnitPrice };
-  });
+/**
+ * Computed customer sales tax + grand total from a saved estimate.
+ * Used for rendering on the PDF and public viewer when customer_sales_tax /
+ * grand_total weren't cached yet (e.g. legacy estimates).
+ */
+export const computeCustomerTax = (lines, estimate) => {
+  const rate = Number(estimate?.customer_sales_tax_rate) || 0;
+  const sellingPrice = Number(estimate?.selling_price) || 0;
+  if (!rate || !sellingPrice) {
+    return {
+      customer_sales_tax: Number(estimate?.customer_sales_tax) || 0,
+      grand_total: Number(estimate?.grand_total) || sellingPrice,
+    };
+  }
+  const customerLines = getCustomerFacingLines(lines, estimate);
+  const taxableRetail = customerLines
+    .filter((l) => l.taxable)
+    .reduce((s, l) => s + lineTotal(l), 0);
+  const tax = taxableRetail * (rate / 100);
+  return {
+    customer_sales_tax: tax,
+    grand_total: sellingPrice + tax,
+  };
 };
 
 // Backwards-compat helper: turn an estimate that has no line items
