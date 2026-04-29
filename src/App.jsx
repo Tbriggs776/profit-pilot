@@ -10,6 +10,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { OrgProvider } from '@/lib/OrgContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import PublicEstimate from '@/pages/PublicEstimate';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -37,6 +38,9 @@ const AuthenticatedApp = () => {
   // Render the main app (anonymous access allowed)
   return (
     <Routes>
+      {/* Public estimate viewer — no Layout wrapper, no auth required */}
+      <Route path="/p/:token" element={<PublicEstimate />} />
+
       <Route path="/" element={
         <LayoutWrapper currentPageName={mainPageKey}>
           <MainPage />

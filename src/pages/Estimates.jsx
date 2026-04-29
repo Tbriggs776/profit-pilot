@@ -11,6 +11,7 @@ import {
   Calculator,
   User,
   TrendingUp,
+  Link2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -419,6 +420,15 @@ function EstimateCard({ estimate, onOpen, onDuplicate, onDelete }) {
             >
               {estimate.status}
             </Badge>
+            {estimate.is_public && (
+              <Badge
+                variant="secondary"
+                className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs flex items-center gap-1"
+              >
+                <Link2 className="w-3 h-3" />
+                Shared
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-slate-500 dark:text-slate-400">
             {estimate.customer?.name && (

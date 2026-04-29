@@ -5,9 +5,12 @@ import {
   ArrowLeft,
   Calculator,
   CreditCard,
+  Download,
   FileText,
   Hammer,
+  Link2,
   Loader2,
+  MoreHorizontal,
   Package,
   Percent,
   Receipt,
@@ -18,6 +21,15 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ShareEstimate from '@/components/ShareEstimate';
+import { downloadEstimatePDF } from '@/lib/pdf';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -172,8 +184,10 @@ export default function PriceCalculator() {
   const [loadedEstimate, setLoadedEstimate] = useState(null);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(null);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
     analytics.track({
@@ -335,6 +349,24 @@ export default function PriceCalculator() {
   };
 
   const canSave = isAuthenticated && activeOrg;
+  const isSavedEstimate = !!loadedEstimate?.id;
+
+  const handleDownloadPdf = async () => {
+    if (!loadedEstimate) return;
+    setGeneratingPdf(true);
+    try {
+      await downloadEstimatePDF({
+        estimate: loadedEstimate,
+        lines,
+        org: activeOrg,
+        customer: loadedEstimate.customer,
+      });
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
   const markupPct =
     calculations.total_costs > 0
       ? (calculations.margin_amount / calculations.total_costs) * 100
@@ -384,17 +416,57 @@ export default function PriceCalculator() {
               )}
 
               {canSave ? (
-                <Button
-                  size="sm"
-                  onClick={() => setSaveDialogOpen(true)}
-                  disabled={saving}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Save className="w-4 h-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">
-                    {loadedEstimate?.id ? 'Update' : 'Save'}
-                  </span>
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => setSaveDialogOpen(true)}
+                    disabled={saving}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Save className="w-4 h-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">
+                      {isSavedEstimate ? 'Update' : 'Save'}
+                    </span>
+                  </Button>
+                  {isSavedEstimate && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline" aria-label="More actions">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem
+                          onClick={handleDownloadPdf}
+                          disabled={generatingPdf}
+                        >
+                          {generatingPdf ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <Download className="w-4 h-4 mr-2" />
+                          )}
+                          Download PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShareDialogOpen(true)}>
+                          <Link2 className="w-4 h-4 mr-2" />
+                          Share public link
+                          {loadedEstimate.is_public && (
+                            <span className="ml-auto text-xs text-emerald-600 font-medium">
+                              On
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => navigate('/Estimates')}
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          All estimates
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </>
               ) : (
                 <Link to="/Profile">
                   <Button size="sm" variant="outline">
@@ -428,6 +500,15 @@ export default function PriceCalculator() {
           onSave={handleSave}
           saving={saving}
         />
+
+        {loadedEstimate?.id && (
+          <ShareEstimate
+            open={shareDialogOpen}
+            onOpenChange={setShareDialogOpen}
+            estimate={loadedEstimate}
+            onChanged={(updated) => setLoadedEstimate(updated)}
+          />
+        )}
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           {!loadedEstimate && (
