@@ -401,8 +401,35 @@ export const duplicateEstimate = async (id, userId) => {
 export const getCustomerFacingLines = (lines, estimate) => {
   if (!Array.isArray(lines) || !lines.length) return [];
   const sellingPrice = Number(estimate?.selling_price) || 0;
+  const financeRate = Number(estimate?.finance_rate) || 0;
+  const financePrice = Number(estimate?.finance_price) || 0;
   const passThroughTotal = Number(estimate?.custom_pass_through) || 0;
+
+  // When financing applies, the single number the customer sees IS finance
+  // price — line items must absorb every markup (margin, warranty, tax,
+  // finance fee) so they sum to that one number. Pass-through gets marked
+  // up here too: from the customer's perspective there's no distinction.
+  if (financeRate > 0 && financePrice > 0) {
+    return distributeAcrossAll(lines, financePrice);
+  }
+  // Otherwise: standard pro-rata of selling_price across direct-cost lines,
+  // pass-through stays at cost, and customer tax is shown as a separate line.
   return distributeRetail(lines, sellingPrice, passThroughTotal);
+};
+
+// Allocates the customer total across ALL lines (including pass-through),
+// used when financing applies because the finance markup applies to the
+// whole bill, not just direct costs.
+const distributeAcrossAll = (lines, customerTotal) => {
+  const totalCost = lines.reduce((s, l) => s + lineTotal(l), 0);
+  return lines.map((line) => {
+    const cost = lineTotal(line);
+    const share = totalCost > 0 ? cost / totalCost : 0;
+    const customerLineTotal = share * Number(customerTotal || 0);
+    const qty = Number(line.quantity) || 1;
+    const customerUnitPrice = qty > 0 ? customerLineTotal / qty : 0;
+    return { ...line, unit_price: customerUnitPrice };
+  });
 };
 
 /**

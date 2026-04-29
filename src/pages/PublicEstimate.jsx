@@ -294,46 +294,46 @@ export default function PublicEstimate() {
         {/* Totals */}
         <div className="mt-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
           <div className="p-6 sm:p-8 space-y-4">
-            {Number(estimate.customer_sales_tax_rate) > 0 &&
-              taxBreakdown?.customer_sales_tax > 0 && (
-                <div className="space-y-2 pb-2 border-b border-slate-100 dark:border-slate-700">
-                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>Subtotal</span>
-                    <span className="font-mono">
-                      {formatCurrency(estimate.selling_price)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
-                    <span>
-                      Sales tax ({estimate.customer_sales_tax_rate}%)
-                    </span>
-                    <span className="font-mono">
-                      {formatCurrency(taxBreakdown.customer_sales_tax)}
-                    </span>
-                  </div>
-                </div>
-              )}
+            {(() => {
+              const financeRate = Number(estimate.finance_rate) || 0;
+              const financePrice = Number(estimate.finance_price) || 0;
+              const isFinanced = financeRate > 0 && financePrice > 0;
+              const customerTaxRate = Number(estimate.customer_sales_tax_rate) || 0;
+              const customerTax = taxBreakdown?.customer_sales_tax || 0;
+              const grandTotal =
+                taxBreakdown?.grand_total ?? estimate.selling_price;
+              const customerTotal = isFinanced ? financePrice : grandTotal;
 
-            <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-5">
-              <p className="text-xs font-bold tracking-wider text-emerald-50 uppercase">
-                Total
-              </p>
-              <p className="text-3xl sm:text-4xl font-bold text-white font-mono mt-1">
-                {formatCurrency(taxBreakdown?.grand_total ?? estimate.selling_price)}
-              </p>
-            </div>
+              return (
+                <>
+                  {!isFinanced && customerTaxRate > 0 && customerTax > 0 && (
+                    <div className="space-y-2 pb-2 border-b border-slate-100 dark:border-slate-700">
+                      <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                        <span>Subtotal</span>
+                        <span className="font-mono">
+                          {formatCurrency(estimate.selling_price)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400">
+                        <span>Sales tax ({customerTaxRate}%)</span>
+                        <span className="font-mono">
+                          {formatCurrency(customerTax)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
-            {Number(estimate.finance_rate) > 0 &&
-              Number(estimate.finance_price) > 0 && (
-                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-5">
-                  <p className="text-xs font-bold tracking-wider text-blue-50 uppercase">
-                    Finance Price (+{estimate.finance_rate}%)
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-white font-mono mt-1">
-                    {formatCurrency(estimate.finance_price)}
-                  </p>
-                </div>
-              )}
+                  <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-5">
+                    <p className="text-xs font-bold tracking-wider text-emerald-50 uppercase">
+                      Total
+                    </p>
+                    <p className="text-3xl sm:text-4xl font-bold text-white font-mono mt-1">
+                      {formatCurrency(customerTotal)}
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 

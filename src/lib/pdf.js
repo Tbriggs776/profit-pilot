@@ -247,13 +247,21 @@ const drawTotals = (doc, estimate, lines, startY, pageWidth) => {
   let y = startY;
 
   const customerTaxRate = Number(estimate.customer_sales_tax_rate) || 0;
+  const financeRate = Number(estimate.finance_rate) || 0;
+  const financePrice = Number(estimate.finance_price) || 0;
+  const isFinanced = financeRate > 0 && financePrice > 0;
+
   const { customer_sales_tax: customerTax, grand_total: grandTotal } =
     computeCustomerTax(lines, estimate);
-  const subtotal = Number(estimate.selling_price) || 0;
-  const showTaxLine = customerTaxRate > 0 && customerTax > 0;
 
-  // Subtotal + sales tax lines (only when customer tax applies)
-  if (showTaxLine) {
+  // Customer sees one number. When financing applies, that single number IS
+  // the finance price (markup baked in invisibly). When not financing, it's
+  // the grand total. Subtotal + sales-tax breakdown only shows for the
+  // non-financed case so the customer can see what tax they're paying.
+  const customerTotal = isFinanced ? financePrice : grandTotal;
+
+  if (!isFinanced && customerTaxRate > 0 && customerTax > 0) {
+    const subtotal = Number(estimate.selling_price) || 0;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...COLORS.slate600);
@@ -265,7 +273,7 @@ const drawTotals = (doc, estimate, lines, startY, pageWidth) => {
     y += 18;
   }
 
-  // Grand total band
+  // Single TOTAL band — no finance markup callout, no separate cash/finance tiles
   doc.setFillColor(...COLORS.emerald);
   doc.rect(boxX, y - 14, boxWidth, 32, 'F');
   doc.setTextColor(...COLORS.white);
@@ -273,25 +281,10 @@ const drawTotals = (doc, estimate, lines, startY, pageWidth) => {
   doc.setFontSize(11);
   doc.text('TOTAL', boxX + 12, y + 4);
   doc.setFontSize(16);
-  doc.text(fmtCurrency(grandTotal), boxX + boxWidth - 12, y + 6, {
+  doc.text(fmtCurrency(customerTotal), boxX + boxWidth - 12, y + 6, {
     align: 'right',
   });
   y += 28;
-
-  if (Number(estimate.finance_rate) > 0 && Number(estimate.finance_price) > 0) {
-    y += 6;
-    doc.setFillColor(59, 130, 246); // blue-500
-    doc.rect(boxX, y - 14, boxWidth, 32, 'F');
-    doc.setTextColor(...COLORS.white);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text(`FINANCE PRICE (+${estimate.finance_rate}%)`, boxX + 12, y + 4);
-    doc.setFontSize(16);
-    doc.text(fmtCurrency(estimate.finance_price), boxX + boxWidth - 12, y + 6, {
-      align: 'right',
-    });
-    y += 28;
-  }
 
   return y + 16;
 };
