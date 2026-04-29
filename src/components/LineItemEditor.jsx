@@ -3,13 +3,12 @@ import { Trash2, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import UnitPicker from '@/components/UnitPicker';
 import {
   defaultTaxableForCategory,
   lineTotal,
   makeBlankLine,
 } from '@/api/estimates';
-
-const COMMON_UNITS = ['ea', 'hr', 'day', 'sq ft', 'lin ft', 'cu yd', 'lb', 'box', 'lot'];
 
 const formatCurrency = (n) =>
   Number(n || 0).toLocaleString('en-US', {
@@ -110,12 +109,6 @@ export default function LineItemEditor({
           Add line
         </Button>
       </div>
-
-      <datalist id="line-unit-options">
-        {COMMON_UNITS.map((u) => (
-          <option key={u} value={u} />
-        ))}
-      </datalist>
     </div>
   );
 }
@@ -155,12 +148,10 @@ function LineRow({ line, showTaxable, onUpdate, onRemove }) {
               <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                 Unit
               </label>
-              <Input
-                list="line-unit-options"
-                value={line.unit || ''}
-                onChange={(e) => onUpdate({ unit: e.target.value })}
-                placeholder="ea"
-                className="h-11 text-base px-2"
+              <UnitPicker
+                value={line.unit}
+                onChange={(unit) => onUpdate({ unit })}
+                size="md"
               />
             </div>
             <div className="col-span-6 min-w-0">
@@ -242,13 +233,10 @@ function LineRow({ line, showTaxable, onUpdate, onRemove }) {
             />
           </div>
           <div className="col-span-2 min-w-0">
-            <Input
-              list="line-unit-options"
-              value={line.unit || ''}
-              onChange={(e) => onUpdate({ unit: e.target.value })}
-              placeholder="ea"
-              className="h-9 text-sm"
-              aria-label="Unit"
+            <UnitPicker
+              value={line.unit}
+              onChange={(unit) => onUpdate({ unit })}
+              size="sm"
             />
           </div>
           <div className="col-span-2 min-w-0 relative">
